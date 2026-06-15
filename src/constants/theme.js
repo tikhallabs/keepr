@@ -47,3 +47,4 @@ export const radius = {
   lg: 20,
   full: 999,
 };
+export const borderRadius = radius;

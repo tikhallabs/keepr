@@ -11,7 +11,7 @@
 |---|---|---|
 | U01 | Project Setup | In Progress |
 | U02 | First Time Setup Flow | Complete |
-| U03 | Database Schema | Not Started |
+| U03 | Database Schema | Complete |
 | U04 | Authentication | Not Started |
 | U05 | Manual Text Capture | Not Started |
 | U06 | Voice Capture | Not Started |
@@ -35,6 +35,7 @@
 |---|---|---|---|
 | S001 | 2026-06-15 | U01 — Project Setup | Complete |
 | S002 | 2026-06-15 | U02 — First Time Setup Flow | Complete |
+| S003 | 2026-06-15 | U03 — | Complete |
 
 ---
 
