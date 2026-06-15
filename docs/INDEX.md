@@ -10,7 +10,7 @@
 | Utility | Name | Status |
 |---|---|---|
 | U01 | Project Setup | In Progress |
-| U02 | First Time Setup Flow | Not Started |
+| U02 | First Time Setup Flow | Complete |
 | U03 | Database Schema | Not Started |
 | U04 | Authentication | Not Started |
 | U05 | Manual Text Capture | Not Started |
@@ -33,7 +33,8 @@
 
 | Session | Date | Utility | Status |
 |---|---|---|---|
-| S001 | 2026-06-15 | U01 — Project Setup | In Progress |
+| S001 | 2026-06-15 | U01 — Project Setup | Complete |
+| S002 | 2026-06-15 | U02 — First Time Setup Flow | Complete |
 
 ---
 
