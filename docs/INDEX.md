@@ -13,7 +13,7 @@
 | U02 | First Time Setup Flow | Complete |
 | U03 | Database Schema | Complete |
 | U04 | Authentication | Complete |
-| U05 | Manual Text Capture | Not Started |
+| U05 | Manual Text Capture | Complete |
 | U06 | Voice Capture | Not Started |
 | U07 | OCR Capture | Not Started |
 | U08 | AI Understanding Engine | Not Started |

@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { colors, typography, spacing, borderRadius } from '../constants/theme';
 import { createRecord } from '../services/recordsService';
+import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
 import { supabase } from '../services/supabase';
 
 export default function CaptureScreen({ navigation }) {
@@ -14,6 +15,9 @@ export default function CaptureScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const inputRef = useRef(null);
+  const { isRecording, isTranscribing, voiceError, handleMicPress } = useVoiceRecorder(
+    (transcribedText) => setBody(transcribedText)
+  );
 
   // Auto-focus keyboard when screen opens
   useEffect(() => {
@@ -124,11 +128,19 @@ export default function CaptureScreen({ navigation }) {
           }
         </TouchableOpacity>
 
-        {/* Mic button — disabled until U06 */}
-        <TouchableOpacity style={styles.micButton} disabled>
-          <Text style={styles.micIcon}>🎙️</Text>
-          <Text style={styles.micLabel}>Voice coming soon</Text>
+{/* Mic button — U06 Voice Capture */}
+        <TouchableOpacity
+          style={[styles.micButton, isRecording && styles.micButtonRecording]}
+          onPress={handleMicPress}
+          disabled={isTranscribing}
+        >
+          <Text style={styles.micIcon}>{isRecording ? '⏹️' : '🎙️'}</Text>
+          <Text style={styles.micLabel}>
+            {isTranscribing ? 'Transcribing...' : isRecording ? 'Tap to stop' : 'Tap to speak'}
+          </Text>
         </TouchableOpacity>
+
+        {voiceError ? <Text style={styles.error}>{voiceError}</Text> : null}
 
       </View>
     </KeyboardAvoidingView>
@@ -234,7 +246,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    opacity: 0.4,
+  },
+  micButtonRecording: {
+    backgroundColor: '#FFF0F0',
+    padding: spacing.sm,
+    borderRadius: borderRadius.md,
   },
   micIcon: {
     fontSize: 20,
