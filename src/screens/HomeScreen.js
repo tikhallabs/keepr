@@ -1,5 +1,5 @@
 // HomeScreen.js — Temporary placeholder for post-login landing
-// This will be replaced in full when we build the Morning Briefing (U13)
+// Full Morning Briefing comes in U13
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, typography, spacing, borderRadius } from '../constants/theme';
 import { supabase } from '../services/supabase';
@@ -16,9 +16,24 @@ export default function HomeScreen({ navigation }) {
       <Text style={styles.subtitle}>
         Home screen coming in U13 — Morning Briefing.
       </Text>
-      <TouchableOpacity style={styles.button} onPress={handleSignOut}>
-        <Text style={styles.buttonText}>Sign Out</Text>
+
+      {/* Capture Button */}
+      <TouchableOpacity
+        style={styles.captureButton}
+        onPress={() => navigation.navigate('Capture')}
+      >
+        <Text style={styles.captureButtonText}>+ Capture</Text>
       </TouchableOpacity>
+
+      <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+        <Text style={styles.signOutText}>Sign Out</Text>
+      </TouchableOpacity>
+
+      {/* Floating Mic Button */}
+      <TouchableOpacity style={styles.micButton} onPress={() => navigation.navigate('Capture')}>
+        <Text style={styles.micIcon}>🎙️</Text>
+      </TouchableOpacity>
+
     </View>
   );
 }
@@ -43,15 +58,41 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacing.xl,
   },
-  button: {
-    backgroundColor: colors.primary,
+  captureButton: {
+    backgroundColor: colors.accent,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
     borderRadius: borderRadius.md,
+    marginBottom: spacing.md,
+    width: '100%',
+    alignItems: 'center',
   },
-  buttonText: {
+  captureButtonText: {
     color: colors.surface,
     fontSize: typography.size.md,
     fontWeight: typography.weight.bold,
+  },
+  signOutButton: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+  },
+  signOutText: {
+    color: colors.textSecondary,
+    fontSize: typography.size.md,
+  },
+  micButton: {
+    position: 'absolute',
+    bottom: spacing.xl,
+    right: spacing.xl,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+  },
+  micIcon: {
+    fontSize: 24,
   },
 });

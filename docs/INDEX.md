@@ -12,7 +12,7 @@
 | U01 | Project Setup | In Progress |
 | U02 | First Time Setup Flow | Complete |
 | U03 | Database Schema | Complete |
-| U04 | Authentication | Not Started |
+| U04 | Authentication | Complete |
 | U05 | Manual Text Capture | Not Started |
 | U06 | Voice Capture | Not Started |
 | U07 | OCR Capture | Not Started |
