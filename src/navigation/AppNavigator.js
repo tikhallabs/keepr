@@ -5,6 +5,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { supabase } from '../services/supabase';
 import { colors } from '../constants/theme';
 import CaptureScreen from '../screens/CaptureScreen';
+
 // Auth Screens
 import AuthGateScreen from '../screens/auth/AuthGateScreen';
 import SignUpScreen from '../screens/auth/SignUpScreen';

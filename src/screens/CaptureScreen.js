@@ -6,10 +6,13 @@ import {
 } from 'react-native';
 import { colors, typography, spacing, borderRadius } from '../constants/theme';
 import { createRecord } from '../services/recordsService';
+import * as ImagePicker from 'expo-image-picker';
+import { Image } from 'react-native';
+import { extractTextFromImage } from '../services/visionService';
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
 import { supabase } from '../services/supabase';
 
-export default function CaptureScreen({ navigation }) {
+export default function CaptureScreen({ navigation, route }) {
   const [objectType, setObjectType] = useState('commitment');
   const [body, setBody] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,6 +22,41 @@ export default function CaptureScreen({ navigation }) {
     (transcribedText) => setBody(transcribedText)
   );
 
+    const [isScanning, setIsScanning] = useState(false);
+  const [capturedImage, setCapturedImage] = useState(null);
+
+  const handleCameraPress = async () => {
+    try {
+      setIsScanning(false);
+      setCapturedImage(null);
+
+      const result = await ImagePicker.launchCameraAsync({
+        base64: true,
+        quality: 0.7,
+      });
+
+      if (result.canceled) return;
+
+      const photo = result.assets[0];
+      setCapturedImage(photo.uri);
+      setIsScanning(true);
+
+      let base64Image = photo.base64;
+      if (base64Image && base64Image.includes(',')) {
+        base64Image = base64Image.split(',')[1];
+      }
+
+      const extractedText = await extractTextFromImage(base64Image);
+      setBody(extractedText);
+
+    } catch (err) {
+      setError('Could not read text from image. Please try again.');
+    } finally {
+      setIsScanning(false);
+      setCapturedImage(null);
+    }
+  };
+
   // Auto-focus keyboard when screen opens
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -27,6 +65,15 @@ export default function CaptureScreen({ navigation }) {
     return () => clearTimeout(timer);
   }, []);
 
+  // Handle text extracted from camera (U07)
+  useEffect(() => {
+    const extractedText = route?.params?.extractedText;
+    if (extractedText) {
+      setBody(extractedText);
+      navigation.setParams({ extractedText: null, timestamp: null });
+    }
+  }, [route?.params?.timestamp]);
+  
   const handleSave = async () => {
     if (!body.trim()) {
       setError('Please enter something to capture.');
@@ -128,19 +175,49 @@ export default function CaptureScreen({ navigation }) {
           }
         </TouchableOpacity>
 
-{/* Mic button — U06 Voice Capture */}
-        <TouchableOpacity
-          style={[styles.micButton, isRecording && styles.micButtonRecording]}
-          onPress={handleMicPress}
-          disabled={isTranscribing}
-        >
-          <Text style={styles.micIcon}>{isRecording ? '⏹️' : '🎙️'}</Text>
-          <Text style={styles.micLabel}>
-            {isTranscribing ? 'Transcribing...' : isRecording ? 'Tap to stop' : 'Tap to speak'}
-          </Text>
-        </TouchableOpacity>
+{/* Capture buttons row — Mic + Camera */}
+        <View style={styles.captureRow}>
+
+          {/* Mic button — U06 */}
+          <TouchableOpacity
+            style={[styles.captureAction, isRecording && styles.micButtonRecording]}
+            onPress={handleMicPress}
+            disabled={isTranscribing}
+          >
+            <Text style={styles.micIcon}>{isRecording ? '⏹️' : '🎙️'}</Text>
+            <Text style={styles.micLabel}>
+              {isTranscribing ? 'Transcribing...' : isRecording ? 'Tap to stop' : 'Tap to speak'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Divider */}
+          <View style={styles.captureRowDivider} />
+
+         {/* Camera button — U07 */}
+          <TouchableOpacity
+            style={styles.captureAction}
+            onPress={handleCameraPress}
+            disabled={isRecording || isTranscribing || isScanning}
+          >
+            <Text style={styles.micIcon}>📷</Text>
+            <Text style={styles.micLabel}>{isScanning ? 'Reading...' : 'Scan text'}</Text>
+          </TouchableOpacity>
+
+        </View>
 
         {voiceError ? <Text style={styles.error}>{voiceError}</Text> : null}
+                {/* Image preview while scanning */}
+        {capturedImage && (
+          <View style={styles.imagePreviewContainer}>
+            <Image source={{ uri: capturedImage }} style={styles.imagePreview} />
+            {isScanning && (
+              <View style={styles.imagePreviewOverlay}>
+                <ActivityIndicator color="#fff" />
+                <Text style={styles.imagePreviewText}>Reading text...</Text>
+              </View>
+            )}
+          </View>
+        )}
 
       </View>
     </KeyboardAvoidingView>
@@ -241,15 +318,26 @@ const styles = StyleSheet.create({
     fontSize: typography.size.md,
     fontWeight: typography.weight.bold,
   },
-  micButton: {
+  captureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+  },
+  captureAction: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
+    flex: 1,
+    paddingVertical: spacing.sm,
+  },
+  captureRowDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: colors.border,
   },
   micButtonRecording: {
     backgroundColor: '#FFF0F0',
-    padding: spacing.sm,
     borderRadius: borderRadius.md,
   },
   micIcon: {
@@ -258,5 +346,26 @@ const styles = StyleSheet.create({
   micLabel: {
     fontSize: typography.size.sm,
     color: colors.textSecondary,
+  },
+    imagePreviewContainer: {
+    marginTop: spacing.md,
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+    height: 120,
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+  },
+  imagePreviewOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  imagePreviewText: {
+    color: '#fff',
+    fontSize: typography.size.sm,
   },
 });
