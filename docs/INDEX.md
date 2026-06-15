@@ -14,8 +14,8 @@
 | U03 | Database Schema | Complete |
 | U04 | Authentication | Complete |
 | U05 | Manual Text Capture | Complete |
-| U06 | Voice Capture | Not Started |
-| U07 | OCR Capture | Not Started |
+| U06 | Voice Capture | Complete |
+| U07 | OCR Capture | Complete |
 | U08 | AI Understanding Engine | Not Started |
 | U09 | Commitment Lifecycle Engine | Not Started |
 | U10 | Idea Engine | Not Started |
