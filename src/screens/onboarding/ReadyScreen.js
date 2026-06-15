@@ -165,5 +165,5 @@ const styles = StyleSheet.create({
     color: colors.surface,
     fontSize: typography.size.md,
     fontWeight: typography.weight.bold,
-  },S
+  },
 });
