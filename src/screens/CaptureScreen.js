@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { colors, typography, spacing, borderRadius } from '../constants/theme';
 import { createRecord } from '../services/recordsService';
+import { understandCapture } from '../services/aiService';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'react-native';
 import { extractTextFromImage } from '../services/visionService';
@@ -17,6 +18,7 @@ export default function CaptureScreen({ navigation, route }) {
   const [body, setBody] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [savedAsIdea, setSavedAsIdea] = useState(false);
   const inputRef = useRef(null);
   const { isRecording, isTranscribing, voiceError, handleMicPress } = useVoiceRecorder(
     (transcribedText) => setBody(transcribedText)
@@ -85,12 +87,37 @@ export default function CaptureScreen({ navigation, route }) {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
+
+      if (objectType === 'idea') {
+        // User explicitly chose Idea — trust them fully, no AI call (D003)
+        await createRecord({
+          userId: user.id,
+          body,
+          objectType: 'idea',
+        });
+        navigation.goBack();
+        return;
+      }
+
+      // objectType === 'commitment' (default) — let AI confirm or reclassify
+      const aiResult = await understandCapture(body);
+
       await createRecord({
         userId: user.id,
         body,
-        objectType,
+        objectType: aiResult.object_type,
+        title: aiResult.title,
+        dueDate: aiResult.due_date,
+        aiProcessed: aiResult.ai_processed,
+        aiConfidence: aiResult.ai_confidence,
       });
-      navigation.goBack();
+
+      if (aiResult.object_type === 'idea') {
+        setSavedAsIdea(true);
+        setTimeout(() => navigation.goBack(), 900);
+      } else {
+        navigation.goBack();
+      }
     } catch (err) {
       setError('Failed to save. Please try again.');
       setLoading(false);
@@ -161,6 +188,9 @@ export default function CaptureScreen({ navigation, route }) {
         {/* Error */}
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
+        {/* AI reclassification indication */}
+        {savedAsIdea ? <Text style={styles.reclassifyNotice}>Saved as Idea</Text> : null}
+ 
         {/* Save Button */}
         <TouchableOpacity
           style={[styles.saveButton, loading && styles.buttonDisabled]}
@@ -303,6 +333,12 @@ const styles = StyleSheet.create({
   error: {
     color: '#E53E3E',
     fontSize: typography.size.sm,
+    marginBottom: spacing.sm,
+  },
+   reclassifyNotice: {
+    color: colors.accent,
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.medium,
     marginBottom: spacing.sm,
   },
   saveButton: {

@@ -10,19 +10,29 @@ import { supabase } from './supabase';
  * @param {string} params.body - Raw text captured
  * @param {string} params.objectType - 'commitment' or 'idea'
  */
-export const createRecord = async ({ userId, body, objectType = 'commitment' }) => {
-  const title = body.trim().slice(0, 60);
+export const createRecord = async ({
+  userId,
+  body,
+  objectType = 'commitment',
+  title = null,
+  dueDate = null,
+  aiProcessed = false,
+  aiConfidence = null,
+}) => {
+  const finalTitle = title || body.trim().slice(0, 60);
 
   const { data, error } = await supabase
     .from('records')
     .insert({
       user_id: userId,
       object_type: objectType,
-      title,
+      title: finalTitle,
       body: body.trim(),
       capture_method: 'text',
       status: 'incomplete',
-      ai_processed: false,
+      due_date: dueDate,
+      ai_processed: aiProcessed,
+      ai_confidence: aiConfidence,
       clarification_questions_asked: 0,
       reschedule_count: 0,
     })
