@@ -29,11 +29,6 @@ export default function HomeScreen({ navigation }) {
         <Text style={styles.signOutText}>Sign Out</Text>
       </TouchableOpacity>
 
-      {/* Floating Mic Button */}
-      <TouchableOpacity style={styles.micButton} onPress={() => navigation.navigate('Capture')}>
-        <Text style={styles.micIcon}>🎙️</Text>
-      </TouchableOpacity>
-
     </View>
   );
 }
@@ -81,19 +76,5 @@ const styles = StyleSheet.create({
     fontSize: typography.size.md,
   },
 
-  micButton: {
-    position: 'absolute',
-    bottom: spacing.xl,
-    right: spacing.xl,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 4,
-  },
-  micIcon: {
-    fontSize: 24,
-  },
+
 });

@@ -1,4 +1,4 @@
-import { supabase } from './supabase'; // ASSUMPTION — adjust to match your actual import path
+import { supabase } from './supabase';
 
 const TERMINAL_STATUSES = ['closed', 'cancelled', 'converted'];
 
@@ -18,31 +18,28 @@ const TRANSITION_MATRIX = {
   scheduled: {
     completed: { requiresConfirmation: false },
     cancelled: { requiresConfirmation: false },
-    overdue: { requiresConfirmation: false, systemOnly: true }, // set by cron, not via this function in practice
+    overdue: { requiresConfirmation: false, systemOnly: true },
   },
   overdue: {
-    scheduled: { requiresConfirmation: false }, // this is a reschedule
+    scheduled: { requiresConfirmation: false },
     completed: { requiresConfirmation: false },
     cancelled: { requiresConfirmation: false },
-    closed: { requiresConfirmation: false, systemOnly: true }, // U12 will trigger this later, not U09
+    closed: { requiresConfirmation: false, systemOnly: true },
   },
 };
 
 export async function transitionRecord(recordId, fromStatus, toStatus, options = {}) {
-  const { confirmed = false, changeReason = null } = options;
+  const { confirmed = false, changeReason = null, newDueDate = null } = options;
 
-  // Rule 1: terminal states can never move anywhere
   if (TERMINAL_STATUSES.includes(fromStatus)) {
     return { success: false, blocked: true, message: 'Create a new commitment' };
   }
 
-  // Rule 2: the move has to exist in the matrix at all
   const rule = TRANSITION_MATRIX[fromStatus]?.[toStatus];
   if (!rule) {
     return { success: false, blocked: true, message: `Cannot move from "${fromStatus}" to "${toStatus}".` };
   }
 
-  // Rule 3: some moves need explicit confirmation before they happen
   if (rule.requiresConfirmation && !confirmed) {
     return {
       success: false,
@@ -54,8 +51,8 @@ export async function transitionRecord(recordId, fromStatus, toStatus, options =
   const nowIso = new Date().toISOString();
   const updates = { status: toStatus, updated_at: nowIso };
   if (toStatus === 'completed') updates.completed_at = nowIso;
+  if (newDueDate) updates.due_date = newDueDate;
 
-  // Reschedule: overdue -> scheduled bumps the counter
   let newRescheduleCount = null;
   if (fromStatus === 'overdue' && toStatus === 'scheduled') {
     const { data: current, error: fetchErr } = await supabase
@@ -130,7 +127,7 @@ export async function reopenRecord(recordId, newStatus, options = {}) {
 
   const { data: userData } = await supabase.auth.getUser();
 
-   const { error: auditErr } = await supabase.from('record_audit').insert({
+  const { error: auditErr } = await supabase.from('record_audit').insert({
     record_id: recordId,
     user_id: userData?.user?.id,
     from_status: 'completed',
@@ -145,4 +142,34 @@ export async function reopenRecord(recordId, newStatus, options = {}) {
   }
 
   return { success: true, newStatus };
+}
+
+// Reschedule on an already-scheduled record — same status, new due_date, still logged
+export async function updateDueDate(recordId, currentStatus, newDueDate, options = {}) {
+  const { changeReason = 'user_action' } = options;
+  const nowIso = new Date().toISOString();
+
+  const { error: updateErr } = await supabase
+    .from('records')
+    .update({ due_date: newDueDate, updated_at: nowIso })
+    .eq('id', recordId);
+  if (updateErr) return { success: false, error: updateErr.message };
+
+  const { data: userData } = await supabase.auth.getUser();
+
+  const { error: auditErr } = await supabase.from('record_audit').insert({
+    record_id: recordId,
+    user_id: userData?.user?.id,
+    from_status: currentStatus,
+    to_status: currentStatus,
+    change_reason: changeReason,
+    notes: 'Due date changed via reschedule',
+    changed_at: nowIso,
+  });
+
+  if (auditErr) {
+    return { success: true, auditWarning: 'Due date updated, but audit log failed: ' + auditErr.message };
+  }
+
+  return { success: true };
 }

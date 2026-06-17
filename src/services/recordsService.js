@@ -18,8 +18,16 @@ export const createRecord = async ({
   dueDate = null,
   aiProcessed = false,
   aiConfidence = null,
+  captureMethod = 'text',
+  status = null,
 }) => {
   const finalTitle = title || body.trim().slice(0, 60);
+
+  const finalStatus = status || (
+    objectType === 'commitment'
+      ? (dueDate ? 'scheduled' : 'unscheduled')
+      : 'incomplete'
+  );
 
   const { data, error } = await supabase
     .from('records')
@@ -28,8 +36,8 @@ export const createRecord = async ({
       object_type: objectType,
       title: finalTitle,
       body: body.trim(),
-      capture_method: 'text',
-      status: 'incomplete',
+      capture_method: captureMethod,
+      status: finalStatus,
       due_date: dueDate,
       ai_processed: aiProcessed,
       ai_confidence: aiConfidence,

@@ -21,6 +21,7 @@ import ReadyScreen from '../screens/onboarding/ReadyScreen';
 
 // App Screens
 import HomeScreen from '../screens/HomeScreen';
+import MainTabs from './MainTabs';
 
 const Stack = createStackNavigator();
 
@@ -57,7 +58,7 @@ export default function AppNavigator() {
     >
       {session ? (
         <>
-          <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen name="Main" component={MainTabs} />
           <Stack.Screen name="Capture" component={CaptureScreen} options={{ presentation: 'transparentModal', headerShown: false }} />
           <Stack.Screen name="Welcome" component={WelcomeScreen} />
           <Stack.Screen name="Name" component={NameScreen} />

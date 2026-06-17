@@ -52,7 +52,7 @@ export default function SignInScreen({ navigation }) {
     }
 
     setLoading(false);
-    navigation.navigate('Home');
+    navigation.navigate('Main');
   };
 
   return (
