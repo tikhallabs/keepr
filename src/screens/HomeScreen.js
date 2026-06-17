@@ -80,6 +80,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: typography.size.md,
   },
+
   micButton: {
     position: 'absolute',
     bottom: spacing.xl,

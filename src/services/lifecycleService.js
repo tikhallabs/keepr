@@ -73,8 +73,11 @@ export async function transitionRecord(recordId, fromStatus, toStatus, options =
   const { error: updateErr } = await supabase.from('records').update(updates).eq('id', recordId);
   if (updateErr) return { success: false, error: updateErr.message };
 
+  const { data: userData } = await supabase.auth.getUser();
+
   const { error: auditErr } = await supabase.from('record_audit').insert({
     record_id: recordId,
+    user_id: userData?.user?.id,
     from_status: fromStatus,
     to_status: toStatus,
     change_reason: changeReason,
@@ -125,11 +128,15 @@ export async function reopenRecord(recordId, newStatus, options = {}) {
   const { error: updateErr } = await supabase.from('records').update({ status: newStatus, updated_at: nowIso }).eq('id', recordId);
   if (updateErr) return { success: false, error: updateErr.message };
 
-  const { error: auditErr } = await supabase.from('record_audit').insert({
+  const { data: userData } = await supabase.auth.getUser();
+
+   const { error: auditErr } = await supabase.from('record_audit').insert({
     record_id: recordId,
+    user_id: userData?.user?.id,
     from_status: 'completed',
     to_status: newStatus,
-    change_reason: changeReason || 'Reopened within 7-day window',
+    change_reason: changeReason || 'user_action',
+    notes: 'Reopened within 7-day window',
     changed_at: nowIso,
   });
 
