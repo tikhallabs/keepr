@@ -5,7 +5,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { supabase } from '../services/supabase';
 import { colors } from '../constants/theme';
 import CaptureScreen from '../screens/CaptureScreen';
-
+import LifecycleTestScreen from '../screens/LifecycleTestScreen';
 // Auth Screens
 import AuthGateScreen from '../screens/auth/AuthGateScreen';
 import SignUpScreen from '../screens/auth/SignUpScreen';
@@ -18,6 +18,7 @@ import NameScreen from '../screens/onboarding/NameScreen';
 import WakeScreen from '../screens/onboarding/WakeScreen';
 import TimezoneScreen from '../screens/onboarding/TimezoneScreen';
 import ReadyScreen from '../screens/onboarding/ReadyScreen';
+
 
 // App Screens
 import HomeScreen from '../screens/HomeScreen';
@@ -59,6 +60,7 @@ export default function AppNavigator() {
         <>
           <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="Capture" component={CaptureScreen} options={{ presentation: 'transparentModal', headerShown: false }} />
+          <Stack.Screen name="LifecycleTest" component={LifecycleTestScreen} />
           <Stack.Screen name="Welcome" component={WelcomeScreen} />
           <Stack.Screen name="Name" component={NameScreen} />
           <Stack.Screen name="Wake" component={WakeScreen} />
