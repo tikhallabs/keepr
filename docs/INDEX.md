@@ -16,10 +16,10 @@
 | U05 | Manual Text Capture | Complete |
 | U06 | Voice Capture | Complete |
 | U07 | OCR Capture | Complete |
-| U08 | AI Understanding Engine | Not Started |
-| U09 | Commitment Lifecycle Engine | Not Started |
-| U10 | Idea Engine | Not Started |
-| U11 | Queue System | Not Started |
+| U08 | AI Understanding Engine | Complete |
+| U09 | Commitment Lifecycle Engine | Complete |
+| U10 | Idea Engine | Complete |
+| U11 | Queue System | Complete |
 | U12 | Notification Engine | Not Started |
 | U13 | Morning Briefing | Not Started |
 | U14 | People Entity System | Not Started |
