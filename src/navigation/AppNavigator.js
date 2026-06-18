@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { supabase } from '../services/supabase';
+import { requestPermissionAndGetToken, setupTokenRefreshListener } from '../services/fcmService';
+import { startNotificationScheduler } from '../services/notificationScheduler';
 import { colors } from '../constants/theme';
 import CaptureScreen from '../screens/CaptureScreen';
 // Auth Screens
@@ -43,6 +45,20 @@ export default function AppNavigator() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!session) return;
+
+    requestPermissionAndGetToken();
+
+    const unsubRefresh = setupTokenRefreshListener();
+    const stopScheduler = startNotificationScheduler();
+
+    return () => {
+      unsubRefresh();
+      stopScheduler();
+    };
+  }, [session]);
 
   if (loading) {
     return (
