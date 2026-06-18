@@ -48,3 +48,18 @@ Don't ask the user to re-explain past work — read these first:
 
 ## When a new decision gets made mid-session
 Add a short 2-3 line entry to `/docs/decisions/DECISION-LOG-v2.md` (what was decided, why) — don't just leave it in conversation. If it's a genuinely new numbered decision, follow the existing D0XX numbering convention.
+
+## WORKING CONVENTIONS (How We Work — Not Product Decisions)
+
+These are conventions about HOW Tikhal and Claude work together. They are NOT product decisions and do NOT belong in DECISION-LOG-v2.md.
+
+### Workflow Split (Session 013)
+- claude.ai (Tikhal-Builder) is used for: planning, teaching, decision-making, and reviewing what Claude Code produces. No code is written there.
+- Claude Code (this tool) is used for: writing code, editing files, running commands — actual execution only.
+- CLAUDE.md, DECISION-LOG-v2.md, and the /docs/sessions/ files are the ONLY bridge between these two tools. There is no automatic memory sharing — if something matters, it must be written into one of these files.
+
+### THINK / FAST Mode (Session 011)
+- THINK mode: used during planning, design, and any decision with real consequences. Full reasoning effort expected.
+- FAST mode: used once a decision is approved and the task is purely mechanical/quick execution.
+- Claude (in either tool) is responsible for noticing when a switch is warranted and flagging it — not just waiting to be told.
+- Always switch back to THINK before closing out a session or finishing a utility.

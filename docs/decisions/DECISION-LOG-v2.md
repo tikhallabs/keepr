@@ -53,18 +53,23 @@ Long-term: AI Chief of Staff answering questions about neglected commitments, br
 
 **D013 — Incomplete Commitment Handling**
 AI may ask maximum 2 clarification questions total (shared budget across all clarification needs including Commitment vs Idea routing). If still incomplete: save as Incomplete, remind after 30 minutes, surface in Daily Briefing.
+The status a record receives at the moment of capture depends on what was extracted: a Commitment with an extracted due date starts as "scheduled." A Commitment with no due date starts as "unscheduled." An Idea always starts as "incomplete." NOTE: this supersedes an earlier statement in SESSION-005 that all captures default to "incomplete" — that earlier statement is no longer accurate and should not be followed.
 
 **D014 — Reminder Persistence Model**
 Hybrid Persistence. AI assigns default persistence levels. Users may override. Unresolved commitments keep appearing in briefings.
 
 **D015 — Overdue Recovery Flow**
 When overdue: mark overdue, immediately ask user to reschedule, complete or cancel. Recovery preferred over punishment.
+The complete, exhaustive list of valid Commitment states is: incomplete, unscheduled, scheduled, overdue, completed, cancelled, closed (7 states). Ideas add one additional state: converted (used when promoted). No other state values are valid.
 
 **D016 — Repeated Reschedule Policy**
 After 3 reschedules: warn user. One final reminder cycle. Then System-Enforced Closure.
+Specific mechanics: 3 free reschedules total. A warning is shown at the 2nd reschedule attempt ("1 attempt left"). A second warning is shown at the 3rd attempt ("This is the last attempt"). The 4th attempt is blocked entirely. Once blocked, a 7-CALENDAR-day (not working-day) auto-cancel countdown begins. Reschedule counting is uniform — it does not matter whether the commitment was in "scheduled" or "overdue" status when rescheduled, all reschedules count the same way.
+Additionally: reschedule warnings are non-dismissible by design — the user cannot tap them away. (Regular, non-reschedule error messages remain dismissible as before.)
 
 **D017 — Ambiguous Scheduling Handling**
 Unclear scheduling: ask up to 2 clarification questions. If still unclear: save and route to incomplete/unscheduled queue.
+When a user gives a date but no clock time, apply these defaults: "today" = 4 hours from now. "tomorrow" = 11:00 AM local. "day after tomorrow" = 11:00 AM local. "morning" = 10:00 AM local. "afternoon" = 2:00 PM local. Any time the user explicitly states always overrides these defaults.
 
 **D018 — Unscheduled Commitment Queue**
 Commitments lacking scheduling info go to dedicated Unscheduled Queue. Reviewed in briefings.
@@ -74,6 +79,7 @@ On completion: ask for notes. If yes: capture up to 100 words. If no: store "No 
 
 **D020 — Reopen Policy**
 Completed commitments reopenable within 7 days. Full audit history preserved and never overwritten.
+The complete, exhaustive list of valid Commitment states is: incomplete, unscheduled, scheduled, overdue, completed, cancelled, closed (7 states). Ideas add one additional state: converted (used when promoted). No other state values are valid.
 
 **D021 — People Entity Strategy**
 People are first-class entities. AI extracts names automatically. User can confirm, correct and merge.
@@ -88,6 +94,10 @@ Two object types exist in the system: Commitment and Idea.
 - An Idea can be promoted to a Commitment at any time — it then inherits the full commitment lifecycle from that point
 - Both share the same database table with an object_type field
 - Ideas have a storage limit per user tier (monetisation hook for post-MVP)
+- The AI may silently reclassify a submitted Commitment down to an Idea if it determines that's the correct type. The user is shown a brief on-screen notice, but is not asked for permission first.
+- Promoting an Idea to a Commitment creates a brand-new commitment row. The original idea row is NOT converted in place — it is marked status "converted" and stores a pointer to the new commitment row. The two rows remain separate but linked.
+- Idea promotion is strictly one-to-one for MVP. One idea can only become one commitment. The idea of one idea spawning multiple commitments is explicitly parked as post-MVP and requires its own future decision-log entry before any code is written.
+- When an idea is promoted, the new commitment inherits the idea's title and body text, and starts with status "unscheduled" (not "incomplete").
 
 **D024 — Morning Briefing Priority**
 Top section of Morning Briefing is an AI Executive Summary explaining what deserves attention, not just a list.
@@ -105,12 +115,31 @@ Every new user completes a mandatory 5-screen setup before using the app:
 The wake phrase is stored in the user profile and used as the universal voice trigger across the entire app.
 Always-on wake word detection is Post-MVP. MVP requires app open + mic tap to activate.
 
+**D027 — Password Rules**
+MVP passwords must be 4-15 characters. No complexity requirements (no mandatory uppercase, numbers, or symbols).
+
+**D028 — Mobile Password Reset**
+Users who signed up with a phone number cannot self-serve reset their password in MVP. They must email support. Only email-account users get self-serve password reset.
+
+**D029 — Camera Privacy Rule**
+The app must never use a custom in-app camera screen that stays open in the background. It must always use the device's native image picker. This is a trust and privacy principle, not a technical workaround.
+
+**D030 — Timezone Display Rule**
+When showing a due date or sending a notification, always use the device's CURRENT timezone at that moment, never the timezone saved during First Time Setup (D026). This matters for users who travel.
+
+**D031 — Forbidden State Transitions**
+"Scheduled" can never move back to "unscheduled" — unscheduled is a one-way entry state only. Terminal states (closed, cancelled, converted) block ALL further state changes; the app must direct the user to create a new commitment instead.
+
+**D032 — Queue View Default**
+The Queue always opens in Stacked view on app launch. The Sorted/Stacked toggle choice is session-only and does not persist across app restarts. This is an intentional product decision, not a gap to fill later.
+
 ---
 
 ## THE 6 PRINCIPLES
 
 **P001 — Capture First, Organize Later**
 Never block commitment capture because information is incomplete. Capture immediately, enrich later.
+The status a record receives at the moment of capture depends on what was extracted: a Commitment with an extracted due date starts as "scheduled." A Commitment with no due date starts as "unscheduled." An Idea always starts as "incomplete." NOTE: this supersedes an earlier statement in SESSION-005 that all captures default to "incomplete" — that earlier statement is no longer accurate and should not be followed.
 
 **P002 — Never Lose a Commitment**
 Commitments move through states and queues. They never disappear.
