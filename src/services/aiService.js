@@ -14,12 +14,18 @@ Fields to return:
   - Commitment: a promise, request, obligation, follow-up, or personal intention (has an action and/or deadline)
   - Idea: a thought, observation, or creative input with no required action
 - title: a short, clean version of the input (max ~80 characters)
-- due_date: an ISO 8601 date/time string if a date or time is mentioned, otherwise null. Use these rules when no exact time is stated:
-  - "today" (no time) → 4 hours from the current time given below
-  - "tomorrow" (no time) → tomorrow at 11:00 AM local time
-  - "day after tomorrow" (no time) → that day at 11:00 AM local time
-  - "morning" → 10:00 AM local time on the date implied
-  - "afternoon" → 2:00 PM local time on the date implied
+- due_date: an ISO 8601 date/time string if a date or time is mentioned, otherwise null.
+  - If an exact clock time is stated anywhere in the input (e.g. "7am", "3:30pm", "19:00"), ALWAYS use that exact time, combined with whatever date is implied (today, tomorrow, a specific date, etc). The exact stated time always overrides the default times below — never substitute a default when an exact time is present.
+  - Only when NO exact time is stated anywhere in the input, use these defaults:
+    - "today" (no time) → 4 hours from the current time given below
+    - "tomorrow" (no time) → tomorrow at 11:00 AM local time
+    - "day after tomorrow" (no time) → that day at 11:00 AM local time
+    - "morning" (no exact time) → 10:00 AM local time on the date implied
+    - "afternoon" (no exact time) → 2:00 PM local time on the date implied
+  - Examples:
+    - "call John at 7am tomorrow" → tomorrow's date at 07:00 local time
+    - "submit the report by 3pm today" → today's date at 15:00 local time
+    - "follow up tomorrow morning" → tomorrow's date at 10:00 AM local time (no exact time stated, default applies)
 
 - status: always "incomplete"
 - ai_confidence: a number between 0 and 1 representing how confident you are in object_type and title — use 0.9+ if clear and unambiguous, 0.4-0.6 if you had to guess

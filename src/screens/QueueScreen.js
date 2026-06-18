@@ -5,12 +5,22 @@ import { View, Text, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator, 
 import { colors, typography, spacing, borderRadius } from '../constants/theme';
 import { STATUS_META, STATUS_ORDER } from '../constants/statusMeta';
 import { fetchRecords } from '../services/recordsService';
-import { transitionRecord, updateDueDate } from '../services/lifecycleService';
+import { transitionRecord, rescheduleRecord } from '../services/lifecycleService';
 import { understandCapture } from '../services/aiService';
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
 import { supabase } from '../services/supabase';
 
 const OPEN_STATUSES = ['incomplete', 'unscheduled', 'scheduled', 'overdue'];
+
+// D016 — days remaining before auto-cancel, counting down from 7
+function getDaysLeftText(closureWarningStartedAt) {
+  const startedMs = new Date(closureWarningStartedAt).getTime();
+  const elapsedDays = (Date.now() - startedMs) / (1000 * 60 * 60 * 24);
+  const daysLeft = Math.max(0, Math.ceil(7 - elapsedDays));
+  if (daysLeft <= 0) return 'Cancelling today';
+  if (daysLeft === 1) return '1 day left to cancel';
+  return `${daysLeft} days left to cancel`;
+}
 
 export default function QueueScreen() {
   const [viewMode, setViewMode] = useState('stacked');
@@ -24,6 +34,7 @@ export default function QueueScreen() {
   const [confirmingId, setConfirmingId] = useState(null);
   const [confirmMessage, setConfirmMessage] = useState('');
   const [errorById, setErrorById] = useState({});
+  const [warningById, setWarningById] = useState({});
 
   const recordsRef = useRef(records);
   const reschedulingIdRef = useRef(reschedulingId);
@@ -75,16 +86,19 @@ export default function QueueScreen() {
 
   const applyReschedule = async (item, newDueDateIso) => {
     setActionBusyId(item.id);
-    let result;
-    if (item.status === 'scheduled') {
-      result = await updateDueDate(item.id, item.status, newDueDateIso);
-    } else {
-      result = await transitionRecord(item.id, item.status, 'scheduled', { newDueDate: newDueDateIso });
-    }
+    const result = await rescheduleRecord(item.id, item.status, newDueDateIso);
     setActionBusyId(null);
-    if (result.success) {
+
+     if (result.success) {
       setReschedulingId(null);
       setExpandedId(null);
+      if (result.warning) {
+        setWarningById((prev) => ({ ...prev, [item.id]: result.warning }));
+      }
+      await loadRecords();
+    } else if (result.finalWarning) {
+      setReschedulingId(null);
+      setWarningById((prev) => ({ ...prev, [item.id]: result.message }));
       await loadRecords();
     } else {
       setErrorById((prev) => ({ ...prev, [item.id]: result.message || result.error || 'Unknown error' }));
@@ -144,6 +158,9 @@ export default function QueueScreen() {
           <Text style={styles.cardTitle}>{item.title}</Text>
           {item.due_date ? (
             <Text style={styles.cardSubtitle}>Due {new Date(item.due_date).toLocaleString()}</Text>
+          ) : null}
+          {item.closure_warning_started_at ? (
+            <Text style={styles.cancelCountdown}>{getDaysLeftText(item.closure_warning_started_at)}</Text>
           ) : null}
         </TouchableOpacity>
 
@@ -211,6 +228,10 @@ export default function QueueScreen() {
               </TouchableOpacity>
             </View>
           </View>
+        )}
+
+        {warningById[item.id] && (
+          <Text style={styles.inlineWarning}>{warningById[item.id]}</Text>
         )}
 
         {errorById[item.id] && (
@@ -352,6 +373,7 @@ const styles = StyleSheet.create({
   card: { borderWidth: 1, borderColor: colors.border, borderRadius: borderRadius.md, padding: spacing.md, marginBottom: spacing.sm, backgroundColor: colors.surface },
   cardTitle: { fontSize: typography.size.md, fontWeight: typography.weight.medium, color: colors.textPrimary },
   cardSubtitle: { fontSize: typography.size.xs, color: colors.textSecondary, marginTop: 2 },
+  cancelCountdown: { fontSize: typography.size.xs, color: colors.error, fontWeight: typography.weight.medium, marginTop: 2 },
   actionRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
   actionBtn: { flex: 1, paddingVertical: spacing.sm, borderRadius: borderRadius.sm, alignItems: 'center', backgroundColor: colors.border },
   actionBtnText: { fontSize: typography.size.xs, fontWeight: typography.weight.medium, color: colors.textPrimary },
@@ -376,4 +398,5 @@ const styles = StyleSheet.create({
   confirmYesBtn: { flex: 1, paddingVertical: spacing.xs, borderRadius: borderRadius.sm, alignItems: 'center', backgroundColor: colors.primary },
   confirmYesBtnText: { fontSize: typography.size.xs, color: colors.surface, fontWeight: typography.weight.bold },
   inlineError: { fontSize: typography.size.xs, color: colors.error, marginTop: spacing.sm },
+  inlineWarning: { fontSize: typography.size.xs, color: colors.error, fontWeight: typography.weight.medium, marginTop: spacing.sm },
 });

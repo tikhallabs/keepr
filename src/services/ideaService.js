@@ -4,7 +4,7 @@ import { createRecord } from './recordsService';
 export async function promoteIdeaToCommitment(ideaId, userId) {
   const { data: idea, error: fetchErr } = await supabase
     .from('records')
-    .select('object_type, status, converted_to_id')
+    .select('object_type, status, converted_to_id, title, body')
     .eq('id', ideaId)
     .single();
 
@@ -18,13 +18,14 @@ export async function promoteIdeaToCommitment(ideaId, userId) {
     return { success: false, blocked: true, message: 'This idea has already been promoted to a commitment.' };
   }
 
-  const newCommitment = await createRecord({
-    userId,
-    body: '',
-    objectType: 'commitment',
-    captureMethod: 'system',
-    status: 'incomplete',
-  });
+const newCommitment = await createRecord({
+  userId,
+  title: idea.title,
+  body: idea.body,
+  objectType: 'commitment',
+  captureMethod: 'system',
+  status: 'unscheduled',
+});
 
   const nowIso = new Date().toISOString();
 

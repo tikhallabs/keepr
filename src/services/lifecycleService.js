@@ -53,19 +53,9 @@ export async function transitionRecord(recordId, fromStatus, toStatus, options =
   if (toStatus === 'completed') updates.completed_at = nowIso;
   if (newDueDate) updates.due_date = newDueDate;
 
-  let newRescheduleCount = null;
-  if (fromStatus === 'overdue' && toStatus === 'scheduled') {
-    const { data: current, error: fetchErr } = await supabase
-      .from('records')
-      .select('reschedule_count')
-      .eq('id', recordId)
-      .single();
+  // Reschedule counting now happens in rescheduleRecord() below, not here.
+  // transitionRecord() no longer touches reschedule_count.
 
-    if (fetchErr) return { success: false, error: fetchErr.message };
-
-    newRescheduleCount = (current?.reschedule_count || 0) + 1;
-    updates.reschedule_count = newRescheduleCount;
-  }
 
   const { error: updateErr } = await supabase.from('records').update(updates).eq('id', recordId);
   if (updateErr) return { success: false, error: updateErr.message };
@@ -172,4 +162,65 @@ export async function updateDueDate(recordId, currentStatus, newDueDate, options
   }
 
   return { success: true };
+}
+// D016 — Repeated Reschedule Policy. Single entry point for ALL reschedules,
+// whether the record is currently scheduled or overdue. Replaces calling
+// updateDueDate() or transitionRecord() directly for reschedule actions.
+export async function rescheduleRecord(recordId, fromStatus, newDueDate) {
+  const { data: current, error: fetchErr } = await supabase
+    .from('records')
+    .select('reschedule_count')
+    .eq('id', recordId)
+    .single();
+
+  if (fetchErr) return { success: false, error: fetchErr.message };
+
+  const newCount = (current?.reschedule_count || 0) + 1;
+
+  // 4th attempt: block the reschedule, start the 7-day cancel countdown instead
+  if (newCount >= 4) {
+    const nowIso = new Date().toISOString();
+    const { error: blockErr } = await supabase
+      .from('records')
+      .update({ closure_warning_started_at: nowIso, updated_at: nowIso })
+      .eq('id', recordId);
+
+    if (blockErr) return { success: false, error: blockErr.message };
+
+    return {
+      success: false,
+      blocked: true,
+      finalWarning: true,
+      message: 'You have not kept this task after 3 reminders. Complete or Cancel now and create a new commitment. (I will cancel it automatically in 7 days.)',
+    };
+  }
+
+  const nowIso = new Date().toISOString();
+  const { error: updateErr } = await supabase
+    .from('records')
+    .update({ due_date: newDueDate, status: 'scheduled', reschedule_count: newCount, updated_at: nowIso })
+    .eq('id', recordId);
+
+  if (updateErr) return { success: false, error: updateErr.message };
+
+  const { data: userData } = await supabase.auth.getUser();
+  const { error: auditErr } = await supabase.from('record_audit').insert({
+    record_id: recordId,
+    user_id: userData?.user?.id,
+    from_status: fromStatus,
+    to_status: 'scheduled',
+    change_reason: 'user_action',
+    notes: 'Rescheduled via rescheduleRecord()',
+    changed_at: nowIso,
+  });
+
+  let warning = null;
+  if (newCount === 2) warning = '1 attempt left.';
+  if (newCount === 3) warning = 'This is the last attempt.';
+
+  if (auditErr) {
+    return { success: true, newCount, warning, auditWarning: 'Rescheduled, but audit log failed: ' + auditErr.message };
+  }
+
+  return { success: true, newCount, warning };
 }
