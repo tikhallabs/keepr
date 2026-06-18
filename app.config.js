@@ -8,9 +8,14 @@ export default ({ config }) => {
       icon: "./assets/icon.png",
       userInterfaceStyle: "light",
       ios: {
-        supportsTablet: true
+        supportsTablet: true,
+        infoPlist: {
+          UIBackgroundModes: ["remote-notification"]
+        }
       },
       android: {
+        package: "com.tikhallabs.keepr",
+        googleServicesFile: "./google-services.json",
         adaptiveIcon: {
           backgroundColor: "#E6F4FE",
           foregroundImage: "./assets/android-icon-foreground.png",
@@ -22,7 +27,15 @@ export default ({ config }) => {
         favicon: "./assets/favicon.png"
       },
       plugins: [
-        "expo-status-bar"
+        "expo-status-bar",
+        "@react-native-firebase/app",
+        "@react-native-firebase/messaging",
+        [
+          "expo-build-properties",
+          {
+            ios: { useFrameworks: "static" }
+          }
+        ]
       ],
       extra: {
         openaiApiKey: process.env.OPENAI_API_KEY,

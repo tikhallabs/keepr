@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "451171355826",
+    "project_id": "tikhal-keepr",
+    "storage_bucket": "tikhal-keepr.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:451171355826:android:2d251f6d88ac57b36a4dab",
+        "android_client_info": {
+          "package_name": "com.tikhallabs.keepr"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBnvzjnMKt9maqCnWA_V6NRHPkWBfMw8CE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
