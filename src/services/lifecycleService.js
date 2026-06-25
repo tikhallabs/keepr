@@ -29,7 +29,7 @@ const TRANSITION_MATRIX = {
 };
 
 export async function transitionRecord(recordId, fromStatus, toStatus, options = {}) {
-  const { confirmed = false, changeReason = null, newDueDate = null } = options;
+  const { confirmed = false, changeReason = null, newDueDate = null, completionNotes = null } = options;
 
   if (TERMINAL_STATUSES.includes(fromStatus)) {
     return { success: false, blocked: true, message: 'Create a new commitment' };
@@ -51,6 +51,7 @@ export async function transitionRecord(recordId, fromStatus, toStatus, options =
   const nowIso = new Date().toISOString();
   const updates = { status: toStatus, updated_at: nowIso };
   if (toStatus === 'completed') updates.completed_at = nowIso;
+  if (toStatus === 'completed' && completionNotes) updates.completion_notes = completionNotes;
   if (newDueDate) updates.due_date = newDueDate;
 
   // Reschedule counting now happens in rescheduleRecord() below, not here.

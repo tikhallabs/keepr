@@ -1,7 +1,7 @@
 // QueueScreen.js — U11: Sorted/Stacked views + expandable actions (Reschedule, Complete, Cancel)
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator, RefreshControl, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { colors, typography, spacing, borderRadius } from '../constants/theme';
 import { STATUS_META, STATUS_ORDER } from '../constants/statusMeta';
 import { fetchRecords } from '../services/recordsService';
@@ -48,6 +48,8 @@ export default function QueueScreen() {
   const [warningById, setWarningById] = useState({});
   const [auditById, setAuditById] = useState({});
   const [auditLoadingById, setAuditLoadingById] = useState({});
+  const [completingId, setCompletingId] = useState(null);
+  const [completionNoteText, setCompletionNoteText] = useState('');
 
   const recordsRef = useRef(records);
   const reschedulingIdRef = useRef(reschedulingId);
@@ -147,18 +149,22 @@ export default function QueueScreen() {
     }
   });
 
-  const handleComplete = async (item, confirmed = false) => {
+  const handleComplete = (item) => {
+    setCompletingId(item.id);
+    setCompletionNoteText('');
+  };
+
+  const submitComplete = async (item, notes) => {
     setActionBusyId(item.id);
-    const result = await transitionRecord(item.id, item.status, 'completed', { confirmed });
+    const result = await transitionRecord(item.id, item.status, 'completed', {
+      confirmed: true,
+      completionNotes: notes,
+    });
     setActionBusyId(null);
-    if (result.requiresConfirmation) {
-      setConfirmingId(item.id);
-      setConfirmMessage(result.message);
-      return;
-    }
     if (result.success) {
+      setCompletingId(null);
+      setCompletionNoteText('');
       setExpandedId(null);
-      setConfirmingId(null);
       await loadRecords();
     } else {
       setErrorById((prev) => ({ ...prev, [item.id]: result.message || result.error || 'Unknown error' }));
@@ -205,7 +211,9 @@ export default function QueueScreen() {
   const renderItem = (item) => {
     const isExpanded = expandedId === item.id;
     const isReschedulingThis = reschedulingId === item.id;
+    const isCompletingThis = completingId === item.id;
     const isBusy = actionBusyId === item.id;
+    const wordCount = completionNoteText.trim() === '' ? 0 : completionNoteText.trim().split(/\s+/).length;
 
     return (
       <View key={item.id} style={styles.card}>
@@ -306,6 +314,40 @@ export default function QueueScreen() {
                 {isTranscribing ? 'Listening for a date...' : isRecording ? 'Tap to stop' : 'Or say a date/time'}
               </Text>
             </TouchableOpacity>
+          </View>
+        )}
+
+        {isCompletingThis && (
+          <View style={styles.completionPanel}>
+            <TextInput
+              style={styles.completionInput}
+              placeholder="What happened? (optional)"
+              placeholderTextColor={colors.textSecondary}
+              value={completionNoteText}
+              onChangeText={setCompletionNoteText}
+              multiline
+              autoFocus
+              textAlignVertical="top"
+            />
+            <Text style={[styles.completionWordCount, wordCount > 100 && styles.completionWordCountOver]}>
+              {wordCount} / 100 words
+            </Text>
+            <View style={styles.completionActionRow}>
+              <TouchableOpacity
+                style={styles.completionSkipBtn}
+                disabled={isBusy}
+                onPress={() => submitComplete(item, 'No Comment')}
+              >
+                <Text style={styles.completionSkipText}>Skip</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.completionSaveBtn, (isBusy || wordCount > 100) && styles.buttonDisabled]}
+                disabled={isBusy || wordCount > 100}
+                onPress={() => submitComplete(item, completionNoteText.trim() || 'No Comment')}
+              >
+                <Text style={styles.completionSaveText}>Save & Complete</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
@@ -494,6 +536,16 @@ const styles = StyleSheet.create({
   inlineWarning: { fontSize: typography.size.xs, color: colors.error, fontWeight: typography.weight.medium, marginTop: spacing.sm },
   reopenBtn: { backgroundColor: '#EBF4FF' },
   reopenBtnText: { color: '#2B6CB0' },
+  completionPanel: { marginTop: spacing.md, gap: spacing.sm },
+  completionInput: { borderWidth: 1.5, borderColor: colors.border, borderRadius: borderRadius.sm, padding: spacing.sm, fontSize: typography.size.sm, color: colors.textPrimary, backgroundColor: colors.background, minHeight: 80, textAlignVertical: 'top' },
+  completionWordCount: { fontSize: typography.size.xs, color: colors.textSecondary, textAlign: 'right' },
+  completionWordCountOver: { color: colors.error, fontWeight: typography.weight.medium },
+  completionActionRow: { flexDirection: 'row', gap: spacing.sm },
+  completionSkipBtn: { flex: 1, paddingVertical: spacing.sm, borderRadius: borderRadius.sm, alignItems: 'center', backgroundColor: colors.border },
+  completionSkipText: { fontSize: typography.size.xs, color: colors.textPrimary, fontWeight: typography.weight.medium },
+  completionSaveBtn: { flex: 2, paddingVertical: spacing.sm, borderRadius: borderRadius.sm, alignItems: 'center', backgroundColor: colors.primary },
+  completionSaveText: { fontSize: typography.size.xs, color: colors.surface, fontWeight: typography.weight.bold },
+  buttonDisabled: { opacity: 0.5 },
   historySection: { marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm },
   historySectionTitle: { fontSize: 10, fontWeight: typography.weight.bold, color: colors.textSecondary, letterSpacing: 0.8, marginBottom: spacing.xs },
   historyRow: { marginBottom: spacing.xs },
