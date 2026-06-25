@@ -41,6 +41,9 @@ export default ({ config }) => {
         openaiApiKey: process.env.OPENAI_API_KEY,
         supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
         supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+        eas: {
+          projectId: "e51d1f13-0c16-4d4b-b537-7a5038644e72"
+        }
       }
     }
   };

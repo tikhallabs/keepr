@@ -49,7 +49,7 @@
 | S014 | 2026-06-18 | None — Decision Log reconciliation | Complete |
 | S015 | 2026-06-19 | U12 — Notification Engine (Firebase FCM) | Complete |
 | S016 | 2026-06-25 | U13 — Morning Briefing | Complete |
-
+| S017 | 2026-06-25 | U13/U14/U15/U16 — Briefing, People, Audit, Notes | Complete |
 ---
 
 ## Decisions Log
