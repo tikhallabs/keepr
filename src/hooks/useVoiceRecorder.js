@@ -1,37 +1,36 @@
-// useVoiceRecorder.js — Manages audio recording start/stop and calls Whisper
-import { useState, useRef } from 'react';
-import { Audio } from 'expo-av';
+import { useState } from 'react';
+import {
+  useAudioRecorder,
+  RecordingPresets,
+  setAudioModeAsync,
+  requestRecordingPermissionsAsync,
+} from 'expo-audio';
 import { transcribeAudio } from '../services/whisperService';
 
 export function useVoiceRecorder(onTranscription) {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [voiceError, setVoiceError] = useState('');
-  const recordingRef = useRef(null);
+
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
   const startRecording = async () => {
     try {
       setVoiceError('');
 
-      // Ask for microphone permission
-      const { granted } = await Audio.requestPermissionsAsync();
+      const { granted } = await requestRecordingPermissionsAsync();
       if (!granted) {
         setVoiceError('Microphone permission denied.');
         return;
       }
 
-      // Configure audio mode for recording
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
       });
 
-      // Start recording
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-
-      recordingRef.current = recording;
+      await recorder.prepareToRecordAsync();
+      recorder.record();
       setIsRecording(true);
 
     } catch (err) {
@@ -44,17 +43,9 @@ export function useVoiceRecorder(onTranscription) {
       setIsRecording(false);
       setIsTranscribing(true);
 
-      // Stop the recording
-      await recordingRef.current.stopAndUnloadAsync();
-      const uri = recordingRef.current.getURI();
-      recordingRef.current = null;
+      await recorder.stop();
+      const uri = recorder.uri;
 
-      // Reset audio mode
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-      });
-
-      // Send to Whisper
       const transcribedText = await transcribeAudio(uri);
       onTranscription(transcribedText);
 

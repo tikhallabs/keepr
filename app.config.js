@@ -27,6 +27,7 @@ export default ({ config }) => {
         favicon: "./assets/favicon.png"
       },
       plugins: [
+        "expo-audio",
         "expo-status-bar",
         "@react-native-firebase/app",
         "@react-native-firebase/messaging",
