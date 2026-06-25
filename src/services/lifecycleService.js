@@ -75,15 +75,15 @@ export async function transitionRecord(recordId, fromStatus, toStatus, options =
     return { success: true, auditWarning: 'Status updated, but audit log failed: ' + auditErr.message };
   }
 
-  return { success: true, newStatus: toStatus, rescheduleCount: newRescheduleCount };
+  return { success: true, newStatus: toStatus };
 }
 
 // D020 — reopen a completed commitment, only within 7 days
 export async function reopenRecord(recordId, newStatus, options = {}) {
   const { confirmed = false, changeReason = null } = options;
 
-  if (!['scheduled', 'overdue'].includes(newStatus)) {
-    return { success: false, error: 'reopenRecord can only set status to "scheduled" or "overdue".' };
+  if (!['scheduled', 'overdue', 'unscheduled'].includes(newStatus)) {
+    return { success: false, error: 'reopenRecord can only set status to "scheduled", "overdue", or "unscheduled".' };
   }
 
   const { data: record, error: fetchErr } = await supabase

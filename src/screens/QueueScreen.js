@@ -1,16 +1,27 @@
 // QueueScreen.js — U11: Sorted/Stacked views + expandable actions (Reschedule, Complete, Cancel)
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { colors, typography, spacing, borderRadius } from '../constants/theme';
 import { STATUS_META, STATUS_ORDER } from '../constants/statusMeta';
 import { fetchRecords } from '../services/recordsService';
-import { transitionRecord, rescheduleRecord } from '../services/lifecycleService';
+import { transitionRecord, rescheduleRecord, reopenRecord } from '../services/lifecycleService';
 import { understandCapture } from '../services/aiService';
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
 import { supabase } from '../services/supabase';
 
 const OPEN_STATUSES = ['incomplete', 'unscheduled', 'scheduled', 'overdue'];
+
+function canReopen(item) {
+  if (item.status !== 'completed' || !item.completed_at) return false;
+  const daysSince = (Date.now() - new Date(item.completed_at)) / (1000 * 60 * 60 * 24);
+  return daysSince <= 7;
+}
+
+function getTargetReopenStatus(item) {
+  if (!item.due_date) return 'unscheduled';
+  return new Date(item.due_date) > new Date() ? 'scheduled' : 'overdue';
+}
 
 // D016 — days remaining before auto-cancel, counting down from 7
 function getDaysLeftText(closureWarningStartedAt) {
@@ -35,6 +46,8 @@ export default function QueueScreen() {
   const [confirmMessage, setConfirmMessage] = useState('');
   const [errorById, setErrorById] = useState({});
   const [warningById, setWarningById] = useState({});
+  const [auditById, setAuditById] = useState({});
+  const [auditLoadingById, setAuditLoadingById] = useState({});
 
   const recordsRef = useRef(records);
   const reschedulingIdRef = useRef(reschedulingId);
@@ -45,8 +58,12 @@ export default function QueueScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const all = await fetchRecords(user.id);
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const open = all.filter(
-      (r) => r.object_type === 'commitment' && OPEN_STATUSES.includes(r.status)
+      (r) => r.object_type === 'commitment' && (
+        OPEN_STATUSES.includes(r.status) ||
+        (r.status === 'completed' && r.completed_at && r.completed_at >= sevenDaysAgo)
+      )
     );
     setRecords(open);
   }, []);
@@ -71,9 +88,22 @@ export default function QueueScreen() {
     setRefreshing(false);
   };
 
+  const loadAuditForRecord = async (recordId) => {
+    setAuditLoadingById((prev) => ({ ...prev, [recordId]: true }));
+    const { data } = await supabase
+      .from('record_audit')
+      .select('id, from_status, to_status, changed_at, change_reason')
+      .eq('record_id', recordId)
+      .order('changed_at', { ascending: false });
+    setAuditById((prev) => ({ ...prev, [recordId]: data || [] }));
+    setAuditLoadingById((prev) => ({ ...prev, [recordId]: false }));
+  };
+
   const toggleExpand = (id) => {
+    const isOpening = expandedId !== id;
     setExpandedId((curr) => (curr === id ? null : id));
     setReschedulingId(null);
+    if (isOpening) loadAuditForRecord(id);
   };
 
   const getQuickPickDate = (type) => {
@@ -135,6 +165,31 @@ export default function QueueScreen() {
     }
   };
 
+  const handleReopen = (item) => {
+    Alert.alert(
+      'Reopen commitment?',
+      'This will move it back to your active queue.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reopen',
+          onPress: async () => {
+            setActionBusyId(item.id);
+            const targetStatus = getTargetReopenStatus(item);
+            const result = await reopenRecord(item.id, targetStatus, { confirmed: true, changeReason: 'user_action' });
+            setActionBusyId(null);
+            if (result.success) {
+              setExpandedId(null);
+              await loadRecords();
+            } else {
+              setErrorById((prev) => ({ ...prev, [item.id]: result.message || result.error || 'Could not reopen.' }));
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleCancel = async (item) => {
     setActionBusyId(item.id);
     const result = await transitionRecord(item.id, item.status, 'cancelled', {});
@@ -166,27 +221,65 @@ export default function QueueScreen() {
 
         {isExpanded && (
           <View style={styles.actionRow}>
-            <TouchableOpacity
-              style={styles.actionBtn}
-              disabled={isBusy}
-              onPress={() => setReschedulingId(isReschedulingThis ? null : item.id)}
-            >
-              <Text style={styles.actionBtnText}>Reschedule</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionBtn, styles.completeBtn]}
-              disabled={isBusy}
-              onPress={() => handleComplete(item)}
-            >
-              <Text style={[styles.actionBtnText, styles.completeBtnText]}>Complete</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionBtn, styles.cancelBtn]}
-              disabled={isBusy}
-              onPress={() => handleCancel(item)}
-            >
-              <Text style={[styles.actionBtnText, styles.cancelBtnText]}>Cancel</Text>
-            </TouchableOpacity>
+            {item.status === 'completed' ? (
+              canReopen(item) && (
+                <TouchableOpacity
+                  style={[styles.actionBtn, styles.reopenBtn]}
+                  disabled={isBusy}
+                  onPress={() => handleReopen(item)}
+                >
+                  <Text style={[styles.actionBtnText, styles.reopenBtnText]}>Reopen</Text>
+                </TouchableOpacity>
+              )
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={styles.actionBtn}
+                  disabled={isBusy}
+                  onPress={() => setReschedulingId(isReschedulingThis ? null : item.id)}
+                >
+                  <Text style={styles.actionBtnText}>Reschedule</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionBtn, styles.completeBtn]}
+                  disabled={isBusy}
+                  onPress={() => handleComplete(item)}
+                >
+                  <Text style={[styles.actionBtnText, styles.completeBtnText]}>Complete</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionBtn, styles.cancelBtn]}
+                  disabled={isBusy}
+                  onPress={() => handleCancel(item)}
+                >
+                  <Text style={[styles.actionBtnText, styles.cancelBtnText]}>Cancel</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        )}
+
+        {isExpanded && (
+          <View style={styles.historySection}>
+            <Text style={styles.historySectionTitle}>HISTORY</Text>
+            {auditLoadingById[item.id] ? (
+              <ActivityIndicator size="small" color={colors.textSecondary} style={{ marginTop: spacing.xs }} />
+            ) : (auditById[item.id] || []).length === 0 ? (
+              <Text style={styles.historyEmpty}>No history yet.</Text>
+            ) : (
+              (auditById[item.id] || []).map((entry) => (
+                <View key={entry.id} style={styles.historyRow}>
+                  <Text style={styles.historyTransition}>
+                    {entry.from_status} → {entry.to_status}
+                  </Text>
+                  <Text style={styles.historyMeta}>
+                    {new Date(entry.changed_at).toLocaleDateString()}
+                    {entry.change_reason && entry.change_reason !== 'user_action'
+                      ? ` · ${entry.change_reason}` : ''}
+                  </Text>
+                </View>
+              ))
+            )}
           </View>
         )}
 
@@ -399,4 +492,12 @@ const styles = StyleSheet.create({
   confirmYesBtnText: { fontSize: typography.size.xs, color: colors.surface, fontWeight: typography.weight.bold },
   inlineError: { fontSize: typography.size.xs, color: colors.error, marginTop: spacing.sm },
   inlineWarning: { fontSize: typography.size.xs, color: colors.error, fontWeight: typography.weight.medium, marginTop: spacing.sm },
+  reopenBtn: { backgroundColor: '#EBF4FF' },
+  reopenBtnText: { color: '#2B6CB0' },
+  historySection: { marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm },
+  historySectionTitle: { fontSize: 10, fontWeight: typography.weight.bold, color: colors.textSecondary, letterSpacing: 0.8, marginBottom: spacing.xs },
+  historyRow: { marginBottom: spacing.xs },
+  historyTransition: { fontSize: typography.size.xs, color: colors.textPrimary, fontWeight: typography.weight.medium },
+  historyMeta: { fontSize: typography.size.xs, color: colors.textSecondary },
+  historyEmpty: { fontSize: typography.size.xs, color: colors.textSecondary },
 });
