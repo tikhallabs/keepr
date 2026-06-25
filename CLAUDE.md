@@ -13,8 +13,8 @@ Expo (React Native, mobile-first, web via Expo Web later) + Node.js + Supabase (
 
 ## Where the real history lives
 Don't ask the user to re-explain past work — read these first:
-- `/docs/decisions/DECISION-LOG-v2.md` — the 26 product decisions (D001–D026) and 6 principles (P001–P006). Nothing built should contradict these. If a request seems to conflict with one, flag it before writing code.
-- `/docs/sessions/SESSION-001.md` through `SESSION-012.md` — what was actually built, tested, and decided, session by session. Session numbers track sittings, not utilities 1:1 — a utility can span several sessions.
+- `/docs/decisions/DECISION-LOG-v2.md` — the 32 product decisions (D001–D032) and 6 principles (P001–P006). Nothing built should contradict these. If a request seems to conflict with one, flag it before writing code.
+- `/docs/sessions/SESSION-001.md` through `SESSION-015.md` — what was actually built, tested, and decided, session by session. Session numbers track sittings, not utilities 1:1 — a utility can span several sessions.
 - `/docs/INDEX.md` — master utility status table.
 
 ## Utility status
@@ -25,16 +25,20 @@ Don't ask the user to re-explain past work — read these first:
 | U09 — Commitment Lifecycle Engine | Complete, fully re-verified (states, transitions, reopen, audit trail, overdue cron) |
 | U10 — Idea Engine | Complete for MVP scope (IdeasScreen, promotion flow, verified) |
 | U11 — Queue System | Complete (Sorted/Stacked views, full action layer, D016 reschedule-limit policy built & tested) |
-| U12–U17 | Not started |
+| U12 — Notification Engine | Complete (Firebase FCM direct integration, local notifications via notifee, token persistence, scheduler) |
+| U13–U17 | Not started |
+
+## Testing requirement (from Session 015)
+**Expo Go no longer works.** expo-dev-client is installed. All testing requires a USB-connected Android device and `npx expo run:android`. No exceptions.
 
 ## Open items carried into this session
 1. D013 — clarification questions (max 2-question shared budget) — not implemented at all yet.
 2. U10 — two untested edges: audit-log-failure branch in promotion flow, and ideas captured via voice/OCR rather than typed text.
 3. Idea → destination choice (stay 1:1 / become a Project / attach to Area-Context) — explicitly parked, post-MVP. Do not build without a new Decision Log entry first.
-4. U12 dependency: once Notification Engine exists, its "remind me later" snooze must call the same reschedule-counting mechanism built for D016 — not a separate one.
+4. U12 — "remind me later" snooze (when built) must call `rescheduleRecord()` from lifecycleService.js, not a separate mechanism.
 5. View mode (Sorted/Stacked) does NOT persist across restarts — this is intentional, not a bug.
 
-**Next decision needed from the user, not to be picked automatically:** whether to build U12 (Notification Engine, next in original order) or D013 (older open item) next.
+**Next utility:** U13 — Morning Briefing.
 
 ## Working conventions (carried over from prior planning sessions)
 - Say **THINK** during planning/design discussion — Short explainable reasoning, options laid out, before any Go Ahead.

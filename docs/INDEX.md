@@ -20,8 +20,8 @@
 | U09 | Commitment Lifecycle Engine | Complete |
 | U10 | Idea Engine | Complete |
 | U11 | Queue System | Complete |
-| U12 | Notification Engine | Not Started |
-| U13 | Morning Briefing | Not Started |
+| U12 | Notification Engine | Complete |
+| U13 | Morning Briefing | Complete |
 | U14 | People Entity System | Not Started |
 | U15 | Audit Trail + Reopen Flow | Not Started |
 | U16 | Completion Notes Flow | Not Started |
@@ -47,6 +47,8 @@
 | S012 | 2026-06-18 | U08/U09/U10/U11 — Bug fixes + completions | Complete |
 | S013 | 2026-06-18 | None — Claude Code migration | Complete |
 | S014 | 2026-06-18 | None — Decision Log reconciliation | Complete |
+| S015 | 2026-06-19 | U12 — Notification Engine (Firebase FCM) | Complete |
+| S016 | 2026-06-25 | U13 — Morning Briefing | Complete |
 
 ---
 

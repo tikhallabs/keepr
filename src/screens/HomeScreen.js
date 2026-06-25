@@ -1,80 +1,104 @@
-// HomeScreen.js — Temporary placeholder for post-login landing
-// Full Morning Briefing comes in U13
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { colors, typography, spacing, borderRadius } from '../constants/theme';
+// HomeScreen.js — U13: Morning Briefing (D009, D024, D025)
+import { useState, useCallback } from 'react';
+import { View, ScrollView, RefreshControl, StyleSheet } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
+import { fetchBriefingData, generateHeadline } from '../services/briefingService';
+import { colors, spacing } from '../constants/theme';
+import BriefingHeader from '../components/BriefingHeader';
+import AIHeadline from '../components/AIHeadline';
+import BriefingList from '../components/BriefingList';
 
 export default function HomeScreen({ navigation }) {
+  const [firstName, setFirstName] = useState('');
+  const [overdue, setOverdue] = useState([]);
+  const [dueToday, setDueToday] = useState([]);
+  const [needsAttention, setNeedsAttention] = useState([]);
+  const [headline, setHeadline] = useState(null);
+  const [headlineLoading, setHeadlineLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-  };
+  const load = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const briefing = await fetchBriefingData(user.id);
+    setFirstName(briefing.firstName);
+    setOverdue(briefing.overdue);
+    setDueToday(briefing.dueToday);
+    setNeedsAttention(briefing.needsAttention);
+
+    setHeadlineLoading(true);
+    try {
+      const hl = await generateHeadline({
+        overdue: briefing.overdue,
+        dueToday: briefing.dueToday,
+        needsAttention: briefing.needsAttention,
+      });
+      setHeadline(hl);
+    } catch (_) {
+      setHeadline(null);
+    } finally {
+      setHeadlineLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, [load]);
+
+  const handleItemPress = useCallback(() => {
+    navigation.navigate('Queue');
+  }, [navigation]);
+
+  const hasItems = overdue.length > 0 || dueToday.length > 0;
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>You're in.</Text>
-      <Text style={styles.subtitle}>
-        Home screen coming in U13 — Morning Briefing.
-      </Text>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={colors.accent}
+          colors={[colors.accent]}
+        />
+      }
+    >
+      <BriefingHeader firstName={firstName} />
 
-      {/* Capture Button */}
-      <TouchableOpacity
-        style={styles.captureButton}
-        onPress={() => navigation.navigate('Capture')}
-      >
-        <Text style={styles.captureButtonText}>+ Capture</Text>
-      </TouchableOpacity>
+      <AIHeadline
+        headline={headline}
+        loading={headlineLoading}
+        hasItems={hasItems}
+      />
 
-      <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-        <Text style={styles.signOutText}>Sign Out</Text>
-      </TouchableOpacity>
-
-    </View>
+      <BriefingList
+        overdue={overdue}
+        dueToday={dueToday}
+        needsAttention={needsAttention}
+        onItemPress={handleItemPress}
+      />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
     backgroundColor: colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
   },
-  title: {
-    fontSize: typography.size.xxl,
-    fontWeight: typography.weight.bold,
-    color: colors.text,
-    marginBottom: spacing.sm,
+  content: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xxl,
   },
-  subtitle: {
-    fontSize: typography.size.md,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
-  },
-  captureButton: {
-    backgroundColor: colors.accent,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.md,
-    width: '100%',
-    alignItems: 'center',
-  },
-  captureButtonText: {
-    color: colors.surface,
-    fontSize: typography.size.md,
-    fontWeight: typography.weight.bold,
-  },
-  signOutButton: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-  },
-  signOutText: {
-    color: colors.textSecondary,
-    fontSize: typography.size.md,
-  },
-
-
 });
