@@ -7,6 +7,8 @@ import {
 import { colors, typography, spacing, borderRadius } from '../constants/theme';
 import { createRecord } from '../services/recordsService';
 import { understandCapture } from '../services/aiService';
+import { processPeopleForRecord } from '../services/peopleService';
+import { usePeople } from '../context/PeopleContext';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'react-native';
 import { extractTextFromImage } from '../services/visionService';
@@ -14,6 +16,7 @@ import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
 import { supabase } from '../services/supabase';
 
 export default function CaptureScreen({ navigation, route }) {
+  const { showPeopleBanner } = usePeople();
   const [objectType, setObjectType] = useState('commitment');
   const [body, setBody] = useState('');
   const [loading, setLoading] = useState(false);
@@ -90,11 +93,12 @@ export default function CaptureScreen({ navigation, route }) {
 
       if (objectType === 'idea') {
         // User explicitly chose Idea — trust them fully, no AI call (D003)
-        await createRecord({
+        const saved = await createRecord({
           userId: user.id,
           body,
           objectType: 'idea',
         });
+        processPeopleForRecord(user.id, saved.id, body).then(showPeopleBanner);
         navigation.goBack();
         return;
       }
@@ -102,7 +106,7 @@ export default function CaptureScreen({ navigation, route }) {
       // objectType === 'commitment' (default) — let AI confirm or reclassify
       const aiResult = await understandCapture(body);
 
-      await createRecord({
+      const saved = await createRecord({
         userId: user.id,
         body,
         objectType: aiResult.object_type,
@@ -111,6 +115,8 @@ export default function CaptureScreen({ navigation, route }) {
         aiProcessed: aiResult.ai_processed,
         aiConfidence: aiResult.ai_confidence,
       });
+
+      processPeopleForRecord(user.id, saved.id, aiResult.title || body).then(showPeopleBanner);
 
       if (aiResult.object_type === 'idea') {
         setSavedAsIdea(true);

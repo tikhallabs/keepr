@@ -26,7 +26,8 @@ Don't ask the user to re-explain past work — read these first:
 | U10 — Idea Engine | Complete for MVP scope (IdeasScreen, promotion flow, verified) |
 | U11 — Queue System | Complete (Sorted/Stacked views, full action layer, D016 reschedule-limit policy built & tested) |
 | U12 — Notification Engine | Complete (Firebase FCM direct integration, local notifications via notifee, token persistence, scheduler) |
-| U13–U17 | Not started |
+| U13 — Morning Briefing | Complete (AI headline, briefing data, pull-to-refresh; HomeScreen.js replaced) |
+| U14–U17 | Not started |
 
 ## Testing requirement (from Session 015)
 **Expo Go no longer works.** expo-dev-client is installed. All testing requires a USB-connected Android device and `npx expo run:android`. No exceptions.
@@ -38,7 +39,7 @@ Don't ask the user to re-explain past work — read these first:
 4. U12 — "remind me later" snooze (when built) must call `rescheduleRecord()` from lifecycleService.js, not a separate mechanism.
 5. View mode (Sorted/Stacked) does NOT persist across restarts — this is intentional, not a bug.
 
-**Next utility:** U13 — Morning Briefing.
+**Next utility:** U14 — People Entity System.
 
 ## Working conventions (carried over from prior planning sessions)
 - Say **THINK** during planning/design discussion — Short explainable reasoning, options laid out, before any Go Ahead.
